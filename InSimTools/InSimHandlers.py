@@ -11,15 +11,11 @@ def autobyte(str_byt):
 
 
 class ServerGeneralEventHandler:
-    """Class to manage the server state.
+    """Class to handle events sent by LFS.
 
-    - Server data / options
-    - Connections / Players
-    - Message handling / chat
-    - Map data 
-    - Error Handling   
+    Generally, all it does, is bind an event to a method, and the method itself will then call 
+    a function defined elswhere (this code stays static so to say.)
 
-    For each handler function, if a specific action is required, a function has to be defined. 
     """
     def __init__(self, insim_obj):
         self.conections = {}
@@ -48,7 +44,7 @@ class ServerGeneralEventHandler:
 
     def _inSim_All_Event_Handler(self, insim, packet):
         print("\nFunc all events returns :", autostring(insim))
-        print('InSim Event Caught.')
+        print('InSim Generic Event Caught : ')
         print(vars(packet))
 
     def _inSim_Outgauge_Event_Handler(self, insim):
