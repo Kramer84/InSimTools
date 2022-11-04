@@ -17,22 +17,20 @@ class ServerGeneralEventHandler:
     a function defined elswhere (this code stays static so to say.)
 
     """
-    def __init__(self, insim_obj):
-        self.conections = {}
+    def __init__(self, insim_obj, callback_class):
+        self.connections = {}
         self.players = {}
 
         self.ISO = insim_obj #insim_object
+        self.CBC = callback_class
         self.bind_handlers()
-
-    
 
     ######################################################################
     ########## InSim Event Handlers. This are functions to react to a packet sent by LFS.
     ########## Other functions will have to be included in them
     ########## Generic Handlers
     def _inSim_Initialization_Event_Handler(self, insim):
-        print('\nInSim initialized')
-        print(autostring(insim))
+        self.CBC.intialization_event_callback(insim)
 
     def _inSim_Closing_Event_Handler(self, insim):
         print('\nInSim connection closed')
@@ -90,6 +88,10 @@ class ServerGeneralEventHandler:
               "\tTrack:", Track,
               "\tWeather:", Weather,
               "\tWind:", Wind)
+
+    def _inSim_Host_Ended_Handler(self, insim, ):
+        print('Host Ended')
+        pass
 
 
 ############## Connection Handlers
@@ -202,6 +204,8 @@ class ServerGeneralEventHandler:
         self.ISO.bind(pyinsim.EVT_OUTSIM,   self._inSim_OutSim_Event_Handler)
         self.ISO.bind(pyinsim.EVT_TIMEOUT,  self._inSim_Timeout_Event_Handler)
         self.ISO.bind(pyinsim.ISP_STA,      self._inSim_State_Packet_Handler)
+        self.ISO.bind(pyinsim.ISP_MPE,      self._inSim_Host_Ended_Handler)
+        
 
         ## Map and layout handlers
         self.ISO.bind(pyinsim.ISP_AXI,      self._inSim_AutoX_Layout_data_handler)
