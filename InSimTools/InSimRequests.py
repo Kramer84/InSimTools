@@ -10,7 +10,7 @@ def autobyte(str_byt):
     return str_byt if type(str_byt)==bytes else bytes(str_byt)
 
 
-class InSimGeneralCommands:
+class InSimGeneralRequestsHandler:
     """Class to manage the server state.
 
     - Server data / options
@@ -24,13 +24,16 @@ class InSimGeneralCommands:
     def __init__(self, insim_obj):
 
         self.ISO = insim_obj #insim_object
-        self.bind_handlers()
-        self.request_state_packet()
-        self.request_AutoX_packet()
 
 
     ######################################################################
     ########## InSim Base Actions
+
+    def initial_requests(self):
+        self.request_state_packet()
+        self.request_AutoX_packet()
+
+
     def close_InSim_connection(self):
         """Sends packet signifying closing
         """
@@ -97,9 +100,3 @@ class InSimGeneralCommands:
         self.ISO.send(pyinsim.IS_MOD, Bits16=Bits16, RR=RR, Width=Width, Height=Height)
 
 
-
-if __name__=="__main__":
-    print('Here we go! ')
-    insim = pyinsim.insim('127.0.0.1', 58672, Admin='YourAdminPassword')
-    ServerGeneralEventHandler(insim)
-    pyinsim.run()
