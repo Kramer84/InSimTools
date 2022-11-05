@@ -346,7 +346,7 @@ class LiveViewState:
         self.ViewPLID     = None #PLID of player being viewed, 0 if none
 
     def update_state(self, insim_state):
-        self.iss_state_flag = ISS_STATE_FLAGS[insim_state.Flags]
+        self.iss_state_flag = ISS_STATE_FLAGS[1] #insim_state.Flags
         self.replay_speed = insim_state.ReplaySpeed
         self.inGameCam    = insim_state.InGameCam #Which type of camera. 
         self.ViewPLID     = insim_state.ViewPLID #PLID of player being viewed, 0 if none
