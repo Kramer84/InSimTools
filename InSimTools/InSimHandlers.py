@@ -3,7 +3,7 @@ import traceback #Cause async and stuff..
 import time
 
 import CustomCallbackEvents as cce
-import InSimRequests as isr 
+import InSimRequests as isr
 
 
 def autostring(str_byt):
@@ -17,7 +17,7 @@ class ServerGeneralEventHandler:
 
     """Class to handle events sent by LFS.
 
-    Generally, all it does, is bind an event to a method, and the method itself will then call 
+    Generally, all it does, is bind an event to a method, and the method itself will then call
     a function defined elswhere (this code stays static so to say.)
 
     """
@@ -52,11 +52,11 @@ class ServerGeneralEventHandler:
         if SubT==pyinsim.TINY_REN : # Race ended (race setup screen)
             print('Race ended')
         if SubT==pyinsim.TINY_CLR : # All players cleared
-            pass
+            print('All players cleared')
         if SubT==pyinsim.TINY_AXC : # Autocross cleared
-            pass
+            prin('AutoX layout cleared')
         if SubT==pyinsim.TINY_VTC : # Vote cancelled
-            pass
+            printt('Vote Cancelled')
 
     def _inSim_Small_Packet_Handler(self, insim, data):
         ReqI = data.ReqI
@@ -77,44 +77,44 @@ class ServerGeneralEventHandler:
         self.connected = True
         self.CBC.initialization_event_callback()
 
-    
+
     #@_BIND(pyinsim.EVT_CLOSE)
     def _inSim_Closing_Event_Handler(self, insim):
-        self.connected = False 
+        self.connected = False
         self.CBC.closing_event_callback()
 
-    
+
     #@_BIND(pyinsim.ISP_VER)
     def _inSim_Version_Info_Handler(self, insim, data):
         print("version=",version,"\nproduct=",product,"\ninSimVer=",inSimVer)
-        self.CBC.version_info_callback(data)        
-        
-    
+        self.CBC.version_info_callback(data)
+
+
     #@_BIND(pyinsim.EVT_ERROR)
     def _inSim_Error_Event_Handler(self, insim):
         print('\nInSim encountered an error. Traceback:\n')
         traceback.print_exc()
 
-    
+
     #@_BIND(pyinsim.EVT_ALL)
     def _inSim_All_Event_Handler(self, insim, packet):
         print("\nFunc all events returns :", autostring(insim))
         print('InSim Generic Event Caught : ')
         print(vars(packet))
 
-    
+
     #@_BIND(pyinsim.EVT_OUTGAUGE)
     def _inSim_Outgauge_Event_Handler(self, insim):
         print('\nInSim Outgauge Event Catched.')
         print(autostring(insim))
 
-    
+
     #@_BIND(pyinsim.EVT_OUTSIM)
     def _inSim_OutSim_Event_Handler(self, insim):
         print('\nOutSim Event Catched.')
         print(autostring(insim))
 
-    
+
     #@_BIND(pyinsim.EVT_TIMEOUT)
     def _inSim_Timeout_Event_Handler(self, insim):
         print('\nTimeout Error Catched')
@@ -128,7 +128,7 @@ class ServerGeneralEventHandler:
 
 
 ############## Connection Handlers
-    
+
     #@_BIND(pyinsim.ISP_NCN)
     def _inSim_newConnection_handler(self, insim,  ncn):
         self.LSS.new_connection(ncn)
@@ -137,12 +137,12 @@ class ServerGeneralEventHandler:
     #@_BIND(pyinsim.ISP_CNL)
     def _inSim_connection_left_handler(self, insim,  cnl):
         self.LSS.connection_left(cnl)
-        
+
 
     #@_BIND(pyinsim.ISP_NPL)
     def _inSim_newPlayer_handler(self, insim,  npl):
         self.LSS.new_player(npl)
-    
+
 
     #@_BIND(pyinsim.ISP_PLL)
     def _inSim_player_left_race_handler(self, insim,  pll):
@@ -155,10 +155,10 @@ class ServerGeneralEventHandler:
     #@_BIND(pyinsim.ISP_CIM)
     def _inSim_Connection_Interface_Mode_Handler(self, insim, cim):
         """Connection interface mode info handler
-        Gets a connections interface mode from a user 
+        Gets a connections interface mode from a user
         """
         self.LSS.connections[cim.UCID].update_interface_mode(cim)
-        
+
 
     #@_BIND(pyinsim.ISP_SLC)
     def _inSim_Car_Selected_Handler(self, insim, slc):
@@ -197,13 +197,13 @@ class ServerGeneralEventHandler:
 
 
 ############## Car Tracking And Positions
-    #@_BIND(pyinsim.ISP_NLP) # MAX 40 Cars are returned !!! 
+    #@_BIND(pyinsim.ISP_NLP) # MAX 40 Cars are returned !!!
     def _inSim_Node_And_Lap_Packet_Handler(self, insim, nlp):
         self.LSS.node_lap_packet_dispatcher(nlp)
 
 
-############## Map and layout handlers 
-    
+############## Map and layout handlers
+
     #@_BIND(pyinsim.ISP_AXI)
     def _inSim_AutoX_Layout_data_handler(self, insim, axi):
         self.LSS.LRD.LDH.update_state(axi)
@@ -212,7 +212,7 @@ class ServerGeneralEventHandler:
 
 
 ############## Message And User Input Handlers
-    
+
     #@_BIND(pyinsim.ISP_MSO)
     def _inSim_Message_Command_Out_Handler(self,insim, mso):
         """MSg Out - system messages and user messages
@@ -227,7 +227,7 @@ class ServerGeneralEventHandler:
         print("Connection",ucid,"With ID", plid, "and type", user_type, "said:")
         print(msg)
 
-    
+
     #@_BIND(pyinsim.ISP_III)
     def _inSim_Message_To_Host_Handler(self,insim, iii):
         """InsIm Info - /i message from user to host's InSim
