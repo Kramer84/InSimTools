@@ -118,19 +118,19 @@ class LiveConnectionPlayerData:
 
         self.LPRD = LivePlayerRaceData(self.LSS, self)
 
-        self.PLID   = None # player's newly assigned unique id
-        self.PType  = None # bit 0: female / bit 1: AI / bit 2: remote
-        self.Flags  = None # player flags
-        self.Plate  = None # number plate - NO ZERO AT END!
-        self.CName  = None # car name
-        self.SName  = None # skin name - MAX_CAR_TEX_NAME
-        self.Tyres  = None # compounds
-        self.H_Mass = None # added mass (kg)
-        self.H_TRes = None # intake restriction
-        self.Model  = None # driver model
-        self.Pass   = None # passengers byte
-        self.SetF   = None # setup flags (see below)
-        self.NumP   = None # number in race - ZERO if this is a join request
+        self.PLID   = -1 # player's newly assigned unique id
+        self.PType  = -1 # bit 0: female / bit 1: AI / bit 2: remote
+        self.Flags  = -1 # player flags
+        self.Plate  = "" # number plate - NO ZERO AT END!
+        self.CName  = "" # car name
+        self.SName  = "" # skin name - MAX_CAR_TEX_NAME
+        self.Tyres  = [] # compounds
+        self.H_Mass = -1 # added mass (kg)
+        self.H_TRes = -1 # intake restriction
+        self.Model  = -1 # driver model
+        self.Pass   = -1 # passengers byte
+        self.SetF   = -1 # setup flags (see below)
+        self.NumP   = -1 # number in race - ZERO if this is a join request
         print(self)
 
     def __repr__(self):
@@ -138,6 +138,7 @@ class LiveConnectionPlayerData:
 
     def player_entered_race(self, npl):
         self.PLID   = npl.PLID
+        self.PName  = npl.PName
         self.PType  = npl.PType
         self.Flags  = npl.Flags
         self.Plate  = npl.Plate
@@ -152,10 +153,10 @@ class LiveConnectionPlayerData:
         self.NumP   = npl.NumP
 
     def player_left_race(self, pll):
-        
-        self.PLID,self.PType,self.Flags,self.Plate           = None
-        self.CName,self.SName,self.Tyres,self.H_Mass         = None
-        self.H_TRes,self.Model,self.Pass,self.SetF,self.NumP = None
+        self.PLID, self.PType,self.Flags = -1
+        self.Plate, self.CName,self.SName = ""
+        self.Tyres= [0]*4
+        self.H_TRes,self.Model,self.Pass,self.SetF,self.NumP, self.H_Mass = None
 
     def update_interface_mode(self, cim): 
         self.Mode     = cim.Mode

@@ -1,5 +1,5 @@
 
-ISS_STATE_FLAGS = { 
+ISS_STATE_FLAGS = {
   1 : "ISS_GAME",     # in game (or MPR)
   2 : "ISS_REPLAY",       # in SPR
   4 : "ISS_PAUSED",       # paused
@@ -42,12 +42,12 @@ DISCONNECT_REASONS = {
 
 
 SETUP_FLAGS = {
-  1 : "SETF_SYMM_WHEELS", 
-  2 : "SETF_TC_ENABLE", 
+  1 : "SETF_SYMM_WHEELS",
+  2 : "SETF_TC_ENABLE",
   4 : "SETF_ABS_ENABLE"}
 
 # Different possible viewmodes a player can have
-CIM_MODES = { 
+CIM_MODES = {
   0 :"CIM_NORMAL",             # 0 - not in a special mode
   1 : "CIM_OPTIONS",            # 1
   2 : "CIM_HOST_OPTIONS",       # 2
@@ -68,7 +68,7 @@ CIM_NORMAL_SUBMODES = {
 
 
 # Different viewpoints you can have while in garage
-CIM_GARAGE_SUBMODES = { 
+CIM_GARAGE_SUBMODES = {
   0 : "GRG_INFO",
   1 : "GRG_COLOURS",
   2 : "GRG_BRAKE_TC",
@@ -117,3 +117,25 @@ PIT_WORK_FLAGS = {
   16 : "PSE_SETUP",
   17 : "PSE_REFUEL",
   18 : "PSE_NUM"}
+
+
+CARS = {"XF GTI" : 1,
+  "XR GT" : 2,
+  "XR GT TURBO" : 4,
+  "RB4 GT" : 8,
+  "FXO TURBO" : 0x10,
+  "LX4" : 0x20,
+  "LX6" : 0x40,
+  "MRT5" : 0x80,
+  "UF 1000" : 0x100,
+  "RACEABOUT" : 0x200,
+  "FZ50" : 0x400,
+  "FORMULA XR" : 0x800,
+  "XF GTR" : 0x1000,
+  "UF GTR" : 0x2000,
+  "FORMULA V8" : 0x4000,
+  "FXO GTR" : 0x8000,
+  "XR GTR" : 0x10000,
+  "FZ50 GTR" : 0x20000,
+  "BMW SAUBER F1.06" : 0x40000,
+  "FORMULA BMW FB02" : 0x80000}

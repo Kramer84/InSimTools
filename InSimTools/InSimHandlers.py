@@ -28,10 +28,10 @@ class ServerGeneralEventHandler:
 
         self.connected = False # InSim connection OK
         self.ISO       = insim_obj #insim_object
-        self.ISGRH     = isr.InSimGeneralRequestsHandler(self.ISO)
+        self.ISRH     = isr.InSimRequestsHandler(self.ISO)
         self.CBC       = cce.ServerGeneralEventCallbacks(self.ISO)
         self.bind_handlers()
-        self.ISGRH.initial_requests()
+        self.ISRH.initial_requests()
 
     def __call__(self, *args):
         print("Trying to call with args:")
@@ -57,6 +57,18 @@ class ServerGeneralEventHandler:
             pass
         if SubT==pyinsim.TINY_VTC : # Vote cancelled
             pass
+
+    def _inSim_Small_Packet_Handler(self, insim, data):
+        ReqI = data.ReqI
+        SubT = data.SubT
+        UVal = data.UVal
+
+        if SubT==pyinsim.SMALL_RTP : # Race Time packet (hundredths of a second since start of race or replay)
+            print('Time since start:', UVal)
+        if SubT==pyinsim.SMALL_ALC : # set or get allowed cars (TINY_ALC)
+            print('Allowed Cars:', UVal)
+
+
 
     ########## Generic Handlers
 
