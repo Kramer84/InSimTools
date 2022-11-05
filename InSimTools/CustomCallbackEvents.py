@@ -11,6 +11,11 @@ class ServerGeneralEventCallbacks :
 
     ########################################################################
 
-    def initialization_event_callback(self, insim):
-        print('\nInSim initialized')
-        print(autostring(insim))
+    def initialization_event_callback(self, *args):
+        pass
+
+    def closing_event_callback(self, *args):
+        pass
+
+    def version_info_callback(self, *args):
+        pass 
