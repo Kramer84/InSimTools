@@ -29,4 +29,4 @@ If you aren't so familiar with Python I would recommend you follow these steps :
 
 - Go to the pyinsim source folders in Anaconda Bash, with your environment activated, and launch one of the commands found in the README, this should install pyinsim.
 
-- Then to start testing,
+- Then to start testing, first update the server information in *main_test.py* , then in Anaconda bash, go to the InSImTools source folder, and just type ```python main_test.py```. Normally it should start connections with LFS, and then crash :) (for now)
