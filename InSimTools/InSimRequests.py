@@ -25,14 +25,13 @@ class InSimRequestsHandler:
 
         self.ISO = insim_obj #insim_object
 
-
-    ######################################################################
-    ########## InSim Base Actions
-
     def initial_requests(self):
         self.request_state_packet()
         self.request_AutoX_packet()
 
+
+    ######################################################################
+    ########## InSim Base Actions
 
     def close_InSim_connection(self):
         """Sends packet signifying closing
@@ -65,6 +64,32 @@ class InSimRequestsHandler:
         msg_cmd = autobyte(msg_cmd)
         self.ISO.send(pyinsim.ISP_MTC, UCID=UCID, PLID=PLID, Msg=msg_cmd)
 
+    def send_key_press(self, ReqI=0, CharB='\x00', Flags=0):
+        """Initialise a new IS_SCH packet.
+
+        Args:
+            ReqI  : 0
+            CharB : key to press
+            Flags : bit 0 : SHIFT / bit 1 : CTRL
+
+        """
+        CharB = autobyte(CharB)
+        self.ISO.send(pyinsim.ISP_SCH, ReqI=ReqI, CharB=CharB, Flags=Flags)
+
+
+    def set_state_flags_packet(self, ReqI=0, Flag=0, OffOn=0):
+        """Send new IS_SFP packet.
+
+        Args:
+            ReqI  : ReqI as received in the request packet
+            Flag  : ``ISS_*`` state flags ISS_STATE_FLAGS in enums or also in pyinsim
+            OffOn  : 0 = off / 1 = on        """
+        self.ISO.send(pyinsim.ISP_SFP, ReqI=ReqI, Flag=Flag, OffOn=OffOn)
+
+    def set_car_camera(self, ViewPLID=0, InGameCam=0):
+        """Set Car Camera - Simplified camera packet (not SHIFT+U mode)
+
+        """
 
     ######################################################################
     ########## Information requests TINY
@@ -231,6 +256,12 @@ class InSimRequestsHandler:
         """
         self.ISO.send(pyinsim.ISP_SMALL, ReqI=ReqI, SubT=pyinsim.SMALL_LCS, UVal=Switch)
 
+
+    ######################################################################
+    ########## Instruction requests TTC
+
+
+    # This is only needed for AutoX layout object selection etc. Not implemented.
 
 
     ######################################################################
