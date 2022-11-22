@@ -54,9 +54,9 @@ class ServerGeneralEventHandler:
         if SubT==pyinsim.TINY_CLR : # All players cleared
             print('All players cleared')
         if SubT==pyinsim.TINY_AXC : # Autocross cleared
-            prin('AutoX layout cleared')
+            print('AutoX layout cleared')
         if SubT==pyinsim.TINY_VTC : # Vote cancelled
-            printt('Vote Cancelled')
+            print('Vote Cancelled')
 
     def _inSim_Small_Packet_Handler(self, insim, data):
         ReqI = data.ReqI

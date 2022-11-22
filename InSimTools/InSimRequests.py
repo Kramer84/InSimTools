@@ -39,21 +39,208 @@ class InSimRequestsHandler:
         """
         self.ISO.send(pyinsim.ISP_TINY, ReqI=1, SubT=pyinsim.TINY_CLOSE)
 
+    def set_state_flag(self, ReqI=0, Flag=0, OffOn=0):
+        """These flags can be set (and are accessed through pyinsim)
+            ISS_SHIFTU_NO_OPT    - SHIFT+U buttons hidden
+            ISS_SHOW_2D          - showing 2d display
+            ISS_MPSPEEDUP        - multiplayer speedup option
+            ISS_SOUND_MUTE       - sound is switched off
+        """
+        self.ISO.send(pyinsim.ISP_SFP, ReqI=ReqI, Flag=Flag, OffOn=OffOn)
+
+    def set_car_camera(self, ReqI=0, ViewPLID=0, InGameCam=0):
+        """Set car to view and camera mode (for everyone?)
+            ReqI      : 0
+            ViewPLID  : UniqueID of player to view
+            InGameCam : InGameCam (as reported in StatePack)
+        """
+        self.ISO.send(pyinsim.ISP_SCH, ReqI=ReqI, ViewPLID=ViewPLID, InGameCam=InGameCam)
+
+    def set_full_camera_packet(self, ReqI=0, Pos=[0,0,0], H=0, P=0, R=0, ViewPLID=0, InGameCam=0, FOV=0.0, Time=0, Flags=0):
+        """Cam Pos Pack - Full camera packet (in car OR SHIFT+U mode)  - can also be received.
+            ReqI      : instruction : 0 / or reply : ReqI as received in the ``TINY_SCP``
+            Pos       : Position vector
+            H         : heading - 0 points along Y axis
+            P         : pitch - 0 means looking at horizon
+            R         : roll - 0 means no roll
+            ViewPLID  : Unique ID of viewed player (0 = none)
+            InGameCam : InGameCam (as reported in StatePack)
+            FOV       : FOV in degrees
+            Time      : Time to get there (0 means instant + reset)
+            Flags     : state flags from ``ISS_*``
+
+        """
+        self.ISO.send(pyinsim.ISP_CCP, ReqI=ReqI, Pos=Pos, H=H, P=P, R=R, ViewPLID=ViewPLID, InGameCam=InGameCam, FOV=FOV, Time=Time, Flags=Flags)
+
+
+    
+    ######################################################################
+    ########## InSim Buttons and action requests   
+        # You can make up to 240 buttons appear on the host or guests (ID = 0 to 239).
+        # You should set the ISF_LOCAL flag (in IS_ISI) if your program is not a host control
+        # system, to make sure your buttons do not conflict with any buttons sent by the host.
+
+        # LFS can display normal buttons in these four screens:
+
+        # - main entry screen
+        # - race setup screen
+        # - in game
+        # - SHIFT+U mode
+
+        # The recommended area for most buttons is defined by:
+
+        #define IS_X_MIN 0
+        #define IS_X_MAX 110
+
+        #define IS_Y_MIN 30
+        #define IS_Y_MAX 170
+
+        # If you draw buttons in this area, the area will be kept clear to
+        # avoid overlapping LFS buttons with your InSim program's buttons.
+        # Buttons outside that area will not have a space kept clear.
+        # You can also make buttons visible in all screens - see below.
+
+
+        # ClickID byte: this value is returned in IS_BTC and IS_BTT packets.
+
+        # Host buttons and local buttons are stored separately, so there is no chance of a conflict between
+        # a host control system and a local system (although the buttons could overlap on screen).
+
+        # Programmers of local InSim programs may wish to consider using a configurable button range and
+        # possibly screen position, in case their users will use more than one local InSim program at once.
+
+        # TypeIn byte: if set, the user can click this button to type in text.
+
+        # Lowest 7 bits are the maximum number of characters to type in (0 to 95)
+        # Highest bit (128) can be set to initialise dialog with the button's text
+
+        # On clicking the button, a text entry dialog will be opened, allowing the specified number of
+        # characters to be typed in.  The caption on the text entry dialog is optionally customisable using
+        # Text in the IS_BTN packet.  If the first character of IS_BTN's Text field is zero, LFS will read
+        # the caption up to the second zero.  The visible button text then follows that second zero.
+
+        # Text: 65-66-67-0 would display button text "ABC" and no caption
+
+        # Text: 0-65-66-67-0-68-69-70-71-0-0-0 would display button text "DEFG" and caption "ABC"
+
+        # Inst byte: mainly used internally by InSim but also provides some extra user flags
+
+        #define INST_ALWAYS_ON  128     # if this bit is set the button is visible in all screens
+
+        # NOTE: You should not use INST_ALWAYS_ON for most buttons.  This is a special flag for buttons
+        # that really must be on in all screens (including the garage and options screens).  You will
+        # probably need to confine these buttons to the top or bottom edge of the screen, to avoid
+        # overwriting LFS buttons.  Most buttons should be defined without this flag, and positioned
+        # in the recommended area so LFS can keep a space clear in the main screens.
+
+        # BStyle byte: style flags for the button
+
+        #define ISB_C1          1       # you can choose a standard
+        #define ISB_C2          2       # interface colour using
+        #define ISB_C4          4       # these 3 lowest bits - see below
+        #define ISB_CLICK       8       # click this button to send IS_BTC
+        #define ISB_LIGHT       16      # light button
+        #define ISB_DARK        32      # dark button
+        #define ISB_LEFT        64      # align text to left
+        #define ISB_RIGHT       128     # align text to right
+
+        # colour 0: light grey         (not user editable)
+        # colour 1: title colour       (default:yellow)
+        # colour 2: unselected text    (default:black)
+        # colour 3: selected text      (default:white)
+        # colour 4: ok                 (default:green)
+        # colour 5: cancel             (default:red)
+        # colour 6: text string        (default:pale blue)
+        # colour 7: unavailable        (default:grey)
+
+        # NOTE: If width or height are zero, this would normally be an invalid button.  But in that case if
+        # there is an existing button with the same ClickID, all the packet contents are ignored except the
+        # Text field.  This can be useful for updating the text in a button without knowing its position.
+        # For example, you might reply to an IS_BTT using an IS_BTN with zero W and H to update the text.
+
+    def send_create_button(self, ReqI=0, UCID=0, ClickID=0, Inst=0, BStyle=0, TypeIn=0, L=0, T=0, W=0, H=0, Text=b''):
+        """Function to create a button with different functionalities, as described above
+            ReqI    : non-zero (returned in ``IS_BTC`` and ``IS_BTT`` packets)
+            UCID    : connection to display the button (0 = local / 255 = all)
+            ClickID : button ID (0 to 239)
+            Inst    : some extra flags from ``INST_*``
+            BStyl   : button style flags from ``ISB_*``
+            TypeIn  : max chars to type in
+            L       : left: 0 - 200
+            T       : top: 0 - 200
+            W       : width: 0 - 200
+            H       : height: 0 - 200
+            Text    : 0 to 240 characters of text
+        """
+        self.ISO.send(pyinsim.ISP_BTN, ReqI=ReqI, UCID=UCID, ClickID=ClickID, Inst=Inst, BStyle=BStyle, TypeIn=TypeIn, L=L, T=T, W=W, H=H, Text=Text)
+
+
+    def delete_button(self, ReqI=0, SubT=0, UCID=0, ClickID=0, MaxClick=0, Inst=0):
+        """ To delete one button or a range of buttons or clear all buttons, send this packet
+            SubT     : subtype, from ``BFN_*`` enumeration
+            UCID     : connection to send to or from (0 = local / 255 = all)
+            ClickID  : ID of button to delete (if ``SubT`` is ``BFN_DEL_BTN``)
+            MaxClick : ID of last button to delete in range of buttons
+            Inst     : used internally by InSim
+
+        """
+        self.ISO.send(pyinsim.ISP_BFN, ReqI=ReqI, SubT=SubT, UCID=UCID, ClickID=ClickID, MaxClick=MaxClick, Inst=Inst)        
+
+        #enum // the fourth byte of IS_BFN packets is one of these
+        #{
+        #    BFN_DEL_BTN,        //  0 - instruction     : delete one button or range of buttons (must set ClickID)
+        #    BFN_CLEAR,          //  1 - instruction     : clear all buttons made by this insim instance
+        #    BFN_USER_CLEAR,     //  2 - info            : user cleared this insim instance's buttons
+        #    BFN_REQUEST,        //  3 - user request    : SHIFT+B or SHIFT+I - request for buttons
+        #};
+
+        # NOTE: BFN_REQUEST allows the user to bring up buttons with SHIFT+B or SHIFT+I
+
+        # SHIFT+I clears all host buttons if any - or sends a BFN_REQUEST to host instances
+        # SHIFT+B is the same but for local buttons and local instances
+
+
+    ######################################################################
+    ########## InSim race actions
+
+    def set_race_order(self, ReqI=0, PLID=[]):
+        """REOrder (when race restarts after qualifying). The NumP value
+            is filled in automatically from the PLID length.
+            PLID : all PLIDs in new order
+            """
+        self.ISO.send(pyinsim.ISP_CCP, ReqI=ReqI, PLID=PLID)        
+
+
 
     ######################################################################
     ########## action? functions
 
-    def send_cmd(self, msg_cmd="/help"):
+
+    def send_single_character(self, ReqI=0, CharB="", Flags=0):
+        """Sends single character, with shift or ctrl
+        Args:
+            ReqI  : 0
+            CharB : key to press
+            Flags : bit 0 : SHIFT / bit 1 : CTRL
+        """
+        ch = autobyte(ch)
+        self.ISO.send(pyinsim.ISP_SCH, ReqI=ReqI, CharB=CharB, Flags=Flags)
+
+    def send_cmd(self, ReqI=0, Msg="/help"):
         '''Sends a command to chat. Can be a simple chat too.
         '''
-        msg_cmd = autobyte(msg_cmd)
-        self.ISO.send(pyinsim.ISP_MST, Msg=msg_cmd)
+        self.ISO.send(pyinsim.ISP_MST, ReqI=ReqI, Msg=autobyte(Msg))
 
-    def send_msg_all(self, msg_cmd):
+    def send_msg_all(self, ReqI=0, Msg="Msg2All"):
         """Sends the same message to everybody, and it should/could not be a command ??
         """
-        msg_cmd = autobyte(msg_cmd="Msg2All")
-        self.ISO.send(pyinsim.ISP_MSX, Msg=msg_cmd)
+        self.ISO.send(pyinsim.ISP_MSX, ReqI=ReqI, Msg=autobyte(Msg))
+
+    def send_msg_local(self, ReqI=0, Sound=0, Msg=b''):
+        """Sends a message to local machine, and it could be a command ??
+        Sound : Sound from ``SND_*`` enumeration.
+        """
+        self.ISO.send(pyinsim.ISP_MSL, ReqI=ReqI, Sound=Sound, Msg=autobyte(Msg))
 
 
     def send_msg_player(self, UCID=0, PLID=0, msg_cmd="Msg2Player"):
@@ -124,8 +311,8 @@ class InSimRequestsHandler:
         """
         self.ISO.send(pyinsim.ISP_TINY, ReqI=ReqI, SubT=pyinsim.TINY_MCI)
 
-    def request_Reorder__Info_packet(self, ReqI=1):
-        """get the player  start order ? Not sure bout this
+    def request_Reorder_Info_packet(self, ReqI=1):
+        """get the player  start order ? Not sure bout this (get the IS_REO packet)
         """
         self.ISO.send(pyinsim.ISP_TINY, ReqI=ReqI, SubT=pyinsim.TINY_REO)
 
