@@ -70,6 +70,62 @@ class ServerGeneralEventHandler:
 
 
 
+    ########## Button Event Handlers
+
+    def _inSim_Button_Function_Event_Handler(self, insim, data):
+        """Button function event reception handler.
+            ReqI     : 0
+            SubT     : subtype, from ``BFN_*`` enumeration
+            UCID     : connection sent from (0 = local / 255 = all)
+            ClickID  : ID of button to delete (if ``SubT`` is ``BFN_DEL_BTN``)
+            MaxClick : ID of last button to delete in range of buttons
+            Inst     : used internally by InSim
+
+            IS_BFN subtype :
+                BFN_DEL_BTN, BFN_CLEAR //  0,1 - instructions , not handled here
+                BFN_USER_CLEAR,     //  2 - info            : user cleared this insim instance's buttons
+                BFN_REQUEST,        //  3 - user request    : SHIFT+B or SHIFT+I - request for buttons
+        """
+
+        Size     = data.Size
+        Type     = data.Type
+        ReqI     = data.ReqI
+        SubT     = data.SubT
+        UCID     = data.UCID
+        ClickID  = data.ClickID
+        MaxClick = data.MaxClick
+        Inst     = data.Inst
+
+
+    def _inSim_Button_Clicked_Event_Handler(self, insim, data):
+        """Gets called when a clickable button is clicked.
+           CFlags byte: click flags:
+            #define ISB_LMB         1       // left click
+            #define ISB_RMB         2       // right click
+            #define ISB_CTRL        4       // ctrl + click
+            #define ISB_SHIFT       8       // shift + click
+        """
+        Size = data.Size    #8
+        ReqI = data.ReqI    #ReqI as received in the IS_BTN
+        UCID = data.UCID    #connection that clicked the button (zero if local)
+        ClickID = data.ClickID  #button identifier originally sent in IS_BTN
+        Inst = data.Inst    #used internally by InSim
+        CFlags = data.CFlags    #button click flags - see below
+        Sp3 = data.Sp3
+
+    def _inSim_Text_Button_Typed_Handler(self, insim, data):
+        """Gets called when a user writes in a textbox and presses Enter
+        """
+        Size = data.Size
+        Type = data.Type
+        ReqI = data.ReqI
+        UCID = data.UCID
+        ClickID = data.ClickID
+        Inst = data.Inst
+        TypeIn = data.TypeIn
+        Sp3 = data.Sp3
+        Text = data.Text
+
     ########## Generic Handlers
 
     #@_BIND(pyinsim.EVT_INIT)
@@ -277,7 +333,10 @@ class ServerGeneralEventHandler:
         "ISP_NLP" : "_inSim_Node_And_Lap_Packet_Handler",
         "ISP_AXI" : "_inSim_AutoX_Layout_data_handler",
         "ISP_MSO" : "_inSim_Message_Command_Out_Handler",
-        "ISP_III" : "_inSim_Message_To_Host_Handler"}
+        "ISP_III" : "_inSim_Message_To_Host_Handler",
+        "ISP_BTF" : "_inSim_Button_Function_Event_Handler",
+        "ISP_BTC" : "_inSim_Button_Clicked_Event_Handler",
+        "ISP_BTT" : "_inSim_Text_Button_Typed_Handler",}
         return event_handler_map
 
     def bind_handlers(self):
