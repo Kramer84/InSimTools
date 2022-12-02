@@ -100,6 +100,29 @@ class InSimRequestsHandler:
         """
         assert JRRAction in [0,1], "You can only accept or decline a request. Check JRRAction."
         self.ISO.send(pyinsim.ISP_JRR, ReqI=ReqI, UCID=UCID, JRRAction=JRRAction, X=X, Y=Y, Zbyte=Zbyte, Flags=Flags, Index=Index, Heading=Heading)
+        
+    def set_car_camera(self, ReqI=0, ViewPLID=0, InGameCam=0):
+        """Set Car Camera - Simplified camera packet (not SHIFT+U mode)
+            ViewPLID  : UniqueID of player to view
+            InGameCam : InGameCam (as reported in StatePack)
+        """
+        self.ISO.send(pyinsim.ISP_SCC, ReqI=ReqI, ViewPLID=ViewPLID, InGameCam=InGameCam)
+
+    def set_full_camera_packet(self, ReqI=0, Pos=[0,0,0], H=0, P=0, R=0, ViewPLID=0, InGameCam=0, FOV=0.0, Time=0, Flags=0):
+        """Cam Pos Pack - Full camera packet (in car OR SHIFT+U mode)  - can also be received.
+            ReqI      : instruction : 0 / or reply : ReqI as received in the ``TINY_SCP``
+            Pos       : Position vector
+            H         : heading - 0 points along Y axis
+            P         : pitch - 0 means looking at horizon
+            R         : roll - 0 means no roll
+            ViewPLID  : Unique ID of viewed player (0 = none)
+            InGameCam : InGameCam (as reported in StatePack)
+            FOV       : FOV in degrees
+            Time      : Time to get there (0 means instant + reset)
+            Flags     : state flags from ``ISS_*``
+
+        """
+        self.ISO.send(pyinsim.ISP_CCP, ReqI=ReqI, Pos=Pos, H=H, P=P, R=R, ViewPLID=ViewPLID, InGameCam=InGameCam, FOV=FOV, Time=Time, Flags=Flags)
 
 
     ######################################################################
