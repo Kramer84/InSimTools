@@ -48,12 +48,11 @@ class InSimRequestsHandler:
         self.ISO.send(pyinsim.ISP_SFP, ReqI=ReqI, Flag=Flag, OffOn=OffOn)
 
     def set_car_camera(self, ReqI=0, ViewPLID=0, InGameCam=0):
-        """Set car to view and camera mode (for everyone?)
-            ReqI      : 0
+        """Set Car Camera - Simplified camera packet (not SHIFT+U mode)
             ViewPLID  : UniqueID of player to view
             InGameCam : InGameCam (as reported in StatePack)
         """
-        self.ISO.send(pyinsim.ISP_SCH, ReqI=ReqI, ViewPLID=ViewPLID, InGameCam=InGameCam)
+        self.ISO.send(pyinsim.ISP_SCC, ReqI=ReqI, ViewPLID=ViewPLID, InGameCam=InGameCam)
 
     def set_full_camera_packet(self, ReqI=0, Pos=[0,0,0], H=0, P=0, R=0, ViewPLID=0, InGameCam=0, FOV=0.0, Time=0, Flags=0):
         """Cam Pos Pack - Full camera packet (in car OR SHIFT+U mode)  - can also be received.
@@ -207,7 +206,7 @@ class InSimRequestsHandler:
             is filled in automatically from the PLID length.
             PLID : all PLIDs in new order
             """
-        self.ISO.send(pyinsim.ISP_CCP, ReqI=ReqI, PLID=PLID)        
+        self.ISO.send(pyinsim.ISP_REO, ReqI=ReqI, PLID=PLID)        
 
 
 
@@ -241,7 +240,6 @@ class InSimRequestsHandler:
         """
         self.ISO.send(pyinsim.ISP_MSL, ReqI=ReqI, Sound=Sound, Msg=autobyte(Msg))
 
-
     def send_msg_player(self, UCID=0, PLID=0, msg_cmd="Msg2Player"):
         '''Sends a message to chat. Can be a command.
             UCID : connection's unique id (0 = host / 255 = all)
@@ -263,7 +261,6 @@ class InSimRequestsHandler:
         CharB = autobyte(CharB)
         self.ISO.send(pyinsim.ISP_SCH, ReqI=ReqI, CharB=CharB, Flags=Flags)
 
-
     def set_state_flags_packet(self, ReqI=0, Flag=0, OffOn=0):
         """Send new IS_SFP packet.
 
@@ -273,10 +270,6 @@ class InSimRequestsHandler:
             OffOn  : 0 = off / 1 = on        """
         self.ISO.send(pyinsim.ISP_SFP, ReqI=ReqI, Flag=Flag, OffOn=OffOn)
 
-    def set_car_camera(self, ViewPLID=0, InGameCam=0):
-        """Set Car Camera - Simplified camera packet (not SHIFT+U mode)
-
-        """
 
     ######################################################################
     ########## Information requests TINY
