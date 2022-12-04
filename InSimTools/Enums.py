@@ -56,6 +56,13 @@ CIM_MODES = {
   5 : "CIM_TRACK_SELECT",       # 5
   6 : "CIM_SHIFTU", 7: None}             # 6 - free view mode
 
+# Different possible vote actions :
+VOTE_ACTIONS = {
+  0 = "VOTE_NONE"
+  1 = "VOTE_END"
+  2 = "VOTE_RESTART"
+  3 = "VOTE_QUALIFY"}
+
 
 # Different possible info views you can get while driving
 CIM_NORMAL_SUBMODES = {

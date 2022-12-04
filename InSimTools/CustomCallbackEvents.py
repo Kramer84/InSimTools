@@ -16,5 +16,5 @@ class ServerGeneralEventCallbacks :
     def closing_event_callback(self, *args):
         print('Closed')
 
-    def version_info_callback(self, *args):
-        print("versiond")
+    def version_info_callback(self, version_data):
+        print("In Sim version:",version_data.InSimVer)

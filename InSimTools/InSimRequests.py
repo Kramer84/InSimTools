@@ -28,7 +28,21 @@ class InSimRequestsHandler:
     ######################################################################
     ########## InSim Base Actions
 
-    def request_Version_packet(self, ReqI=0):
+
+    def set_node_lap_packet_rate(self, ReqI=0, interval=0): # (0 means stop, otherwise time interval: 40, 50, 60... 8000 ms)
+        """ You can change the rate of NLP or MCI after initialisation by sending this IS_SMALL:
+        """
+        self.ISO.send(pyinsim.ISP_SMALL, ReqI=ReqI, SubT=pyinsim.SMALL_NLI, UVal=interval)
+
+    def send_keep_alive_packet(self, ReqI=0):
+        """Sends a packet to keep the InSim conneciton alive
+        """
+        self.ISO.send(pyinsim.ISP_TINY, ReqI=ReqI, SubT=pyinsim.TINY_NONE)
+
+    def request_if_connection_up(self, ReqI=0): # If you want to request a reply from LFS to check the connection
+        self.ISO.send(pyinsim.ISP_TINY, ReqI=ReqI, SubT=pyinsim.TINY_PING)
+
+    def request_version_packet(self, ReqI=0):
         """Sends a packet to request the InSim version
         """
         self.ISO.send(pyinsim.ISP_TINY, ReqI=ReqI, SubT=pyinsim.TINY_VER)
@@ -100,7 +114,7 @@ class InSimRequestsHandler:
         """
         assert JRRAction in [0,1], "You can only accept or decline a request. Check JRRAction."
         self.ISO.send(pyinsim.ISP_JRR, ReqI=ReqI, UCID=UCID, JRRAction=JRRAction, X=X, Y=Y, Zbyte=Zbyte, Flags=Flags, Index=Index, Heading=Heading)
-        
+
     def set_car_camera(self, ReqI=0, ViewPLID=0, InGameCam=0):
         """Set Car Camera - Simplified camera packet (not SHIFT+U mode)
             ViewPLID  : UniqueID of player to view
@@ -127,6 +141,11 @@ class InSimRequestsHandler:
 
     ######################################################################
     ########## InSIM cars and mods management (allowing cars, getting info)..
+
+    def request_all_selected_cars_packet(self, ReqI=0):
+        """send IS_SLC packets for all connections
+        """
+        self.ISO.send(pyinsim.ISP_TINY, ReqI=ReqI, SubT=pyinsim.TINY_SLC)
 
     def request_all_allowed_cars(self, ReqI=0):
         """Request a SMALL_ALC packet (allowed cars)
@@ -170,12 +189,29 @@ class InSimRequestsHandler:
             H_Mass and H_TRes for each car: XF GTI = 0 / XR GT = 1 etc"""
         self.ISO.send(pyinsim.ISP_HCP, ReqI=ReqI,  Zero=Zero, Info=Info)
 
+    def set_local_car_switches(self, ReqI=0, Switch=0): #  Possible valmues LCS_SET_SIGNALS, LCS_SET_FLASH, LCS_SET_HEADLIGHTS, LCS_SET_HORN, LCS_SET_SIREN
+        """ SMALL_LCS - set local car switches (lights, horn, siren)
+        // Bits 0 to 7 are a set of flags specifying which values to set.  You can set as many
+        // as you like at a time.  This is to allow you to set only the values you want to set
+        // while leaving the others to be controlled by the user.
+        // Depending on the above values, InSim will read some of the following values and try
+        // to set them as required, if a real player is found on the local computer.
+
+        // bits 8-9   (Switches & 0x0300) - Signal    (0 off / 1 left / 2 right / 3 hazard)
+        // bit  10    (Switches & 0x0400) - Flash
+        // bit  11    (Switches & 0x0800) - Headlights
+
+        // bits 16-18 (Switches & 0x070000) - Horn    (0 off / 1 to 5 horn type)
+        // bits 20-21 (Switches & 0x300000) - Siren   (0 off / 1 fast / 2 slow)
+        """
+        self.ISO.send(pyinsim.ISP_SMALL, ReqI=ReqI, SubT=pyinsim.SMALL_LCS, UVal=Switch)
+
 
 
     ######################################################################
     ########## InSim race actions
 
-    def request_vote_cancel_packet(self, ReqI=0):
+    def cancel_vote(self, ReqI=0):
         """Sends a packet to cancel a vote
         """
         self.ISO.send(pyinsim.ISP_TINY, ReqI=ReqI, SubT=pyinsim.TINY_VTC)
@@ -283,80 +319,6 @@ class InSimRequestsHandler:
         self.ISO.send(pyinsim.ISP_SCH, ReqI=ReqI, CharB=CharB, Flags=Flags)
 
 
-
-    ######################################################################
-    ########## Information requests TINY
-
-    def request_replay_information_packet(self, ReqI=0):
-        """send an IS_RIP - Replay Information Packet
-        """
-        self.ISO.send(pyinsim.ISP_TINY, ReqI=ReqI, SubT=pyinsim.TINY_RIP)
-
-    def request_all_selected_cars_packet(self, ReqI=0):
-        """send IS_SLC packets for all connections
-        """
-        self.ISO.send(pyinsim.ISP_TINY, ReqI=ReqI, SubT=pyinsim.TINY_SLC)
-
-
-
-    ######################################################################
-    ########## Instruction requests SMALL
-
-    def request_start_sending_positions_viewed_car_packet(self, ReqI=0, packet_rate=0):
-        """start sending positions - OutSim ?
-        """
-        self.ISO.send(pyinsim.ISP_SMALL, ReqI=ReqI, SubT=pyinsim.SMALL_SSP, UVal=packet_rate)
-
-    def request_start_sending_gauges_viewed_car_packet(self, ReqI=0, packet_rate=0):
-        """start sending gauges - OutSim ?
-        """
-        self.ISO.send(pyinsim.ISP_SMALL, ReqI=ReqI, SubT=pyinsim.SMALL_SSG, UVal=packet_rate)
-
-    #shit#def request_Send_Vote_Action_packet(self, ReqI=0, vote_action=0): # Vote actions : {0 : No vote, 1 : End_ race, 2 : restart, 3 : qualify}
-    #shit#    """request players vote, or somethin
-    #shit#    """
-    #shit#    self.ISO.send(pyinsim.ISP_SMALL, ReqI=ReqI, SubT=pyinsim.SMALL_VTA, UVal=vote_action)
-
-    # You can stop or start time in LFS and while it is stopped you can send packets to move
-    # time in steps.  Time steps are specified in hundredths of a second.
-    # Warning: unlike pausing, this is a "trick" to LFS and the program is unaware of time
-    # passing so you must not leave it stopped because LFS is unusable in that state.
-    # This packet is not available in live multiplayer mode.
-
-    def request_time_stop_packet(self, ReqI=0, stop=0): # (1 - stop / 0 - carry on)
-        """Stop and Start with this IS_SMALL:
-        """
-        self.ISO.send(pyinsim.ISP_SMALL, ReqI=ReqI, SubT=pyinsim.SMALL_TMS, UVal=stop)
-
-    def request_time_step_packet(self, ReqI=0, step=0): # (number of hundredths of a second to update)
-        """When STOPPED, make time step updates with this IS_SMALL:
-        """
-        self.ISO.send(pyinsim.ISP_SMALL, ReqI=ReqI, SubT=pyinsim.SMALL_STP, UVal=step)
-
-    def request_set_node_lap_rate_packet(self, ReqI=0, interval=0): # (0 means stop, otherwise time interval: 40, 50, 60... 8000 ms)
-        """ You can change the rate of NLP or MCI after initialisation by sending this IS_SMALL:
-        """
-        self.ISO.send(pyinsim.ISP_SMALL, ReqI=ReqI, SubT=pyinsim.SMALL_NLI, UVal=interval)
-
-    def request_set_local_car_switches_packet(self, ReqI=0, Switch=0): #  Possible valmues LCS_SET_SIGNALS, LCS_SET_FLASH, LCS_SET_HEADLIGHTS, LCS_SET_HORN, LCS_SET_SIREN
-        """ SMALL_LCS - set local car switches (lights, horn, siren)
-        // Bits 0 to 7 are a set of flags specifying which values to set.  You can set as many
-        // as you like at a time.  This is to allow you to set only the values you want to set
-        // while leaving the others to be controlled by the user.
-        // Depending on the above values, InSim will read some of the following values and try
-        // to set them as required, if a real player is found on the local computer.
-
-        // bits 8-9   (Switches & 0x0300) - Signal    (0 off / 1 left / 2 right / 3 hazard)
-        // bit  10    (Switches & 0x0400) - Flash
-        // bit  11    (Switches & 0x0800) - Headlights
-
-        // bits 16-18 (Switches & 0x070000) - Horn    (0 off / 1 to 5 horn type)
-        // bits 20-21 (Switches & 0x300000) - Siren   (0 off / 1 fast / 2 slow)
-        """
-        self.ISO.send(pyinsim.ISP_SMALL, ReqI=ReqI, SubT=pyinsim.SMALL_LCS, UVal=Switch)
-
-
-
     ######################################################################
     ########## Map and object handling
 
@@ -403,11 +365,16 @@ class InSimRequestsHandler:
         """
         self.ISO.send(pyinsim.ISP_AXM, ReqI=ReqI, NumO=NumO, UCID=UCID, PMOAction=PMOAction, PMOFlags=PMOFlags, Sp3=Sp3, Info=Info)
 
+    def request_is_axm_for_user(self, ReqI=0, UCID=0, B1=0, B2=0, B3=0):
+        # send IS_AXM for a layout editor selection of a user.
+        self.ISO.send(pyinsim.ISP_TTC, ReqI=ReqI, SubT=pyinsim.TTC_SEL, UCID=UCID, B1=B1, B2=B2, B3=B3)
 
-    def send_target_to_connection(self, ReqI=0, SubT=pyinsim.TTC_NONE, UCID=0, B1=0, B2=0, B3=0):
-        """General purpose 8 byte packet (Target To Connection)
-        """
-        self.ISO.send(pyinsim.ISP_TTC, ReqI=ReqI, SubT=SubT, UCID=UCID, B1=B1, B2=B2, B3=B3)
+    def set_layout_editor_listening_behavior(self, ReqI=0, OffOn=0, UCID=0, B1=0, B2=0, B3=0):
+        #send IS_AXM every time the selection changes or turn it off for a user
+        if OffOn==1:
+            self.ISO.send(pyinsim.ISP_TTC, ReqI=ReqI, SubT=pyinsim.TTC_SEL_START, UCID=UCID, B1=B1, B2=B2, B3=B3)
+        if OffOn==0:
+            self.ISO.send(pyinsim.ISP_TTC, ReqI=ReqI, SubT=pyinsim.TTC_SEL_STOP, UCID=UCID, B1=B1, B2=B2, B3=B3)
 
 
     ######################################################################
@@ -557,6 +524,31 @@ class InSimRequestsHandler:
     ######################################################################
     ########## Camera - screenshots - replay - spectating...
 
+    def request_replay_information_packet(self, ReqI=0):
+        """send an IS_RIP - Replay Information Packet
+        """
+        self.ISO.send(pyinsim.ISP_TINY, ReqI=ReqI, SubT=pyinsim.TINY_RIP)
+
+    def request_viewed_car_position_packets(self, ReqI=0, UVal=0):
+        """To request Car Positions from the currently viewed car, send this IS_SMALL
+        UVal : rate in ms, 0 to stop sending
+
+        If OutSim has not been setup in cfg.txt, the SSP packet makes LFS send UDP packets
+        if in game, using the OutSim system as documented near the end of this text file.
+        You do not need to set any OutSim values in LFS cfg.txt - OutSim is fully
+        initialised by the SSP packet.
+
+        The OutSim packets will be sent to the UDP port specified in the InSimInit packet.
+        NOTE: OutSim packets are not InSim packets and don't have a 4-byte header.
+
+        """
+        self.ISO.send(pyinsim.ISP_SMALL, ReqI=ReqI, SubT=pyinsim.SMALL_SSP, UVal=UVal)
+
+    def request_viewed_car_dashboard_packets(self, ReqI=0, UVal=0):
+        """start sending gauges - OutSim ?
+        """
+        self.ISO.send(pyinsim.ISP_SMALL, ReqI=ReqI, SubT=pyinsim.SMALL_SSG, UVal=UVal)
+
     def request_camera_pos_packet(self, ReqI=0):
         """Sends a packet to LFS so that it sends back the Cam Pos Pack - Full camera packet (in car OR SHIFT+U mode)
         """
@@ -655,3 +647,22 @@ class InSimRequestsHandler:
             Error : 0 = OK / other values from ``SSH_*``
             BMP   : name of screenshot file: last byte must be zero"""
         self.ISO.send(pyinsim.ISP_SSH, ReqI=ReqI, Error=Error, BMP=autobyte(BMP))
+
+
+    ######## MISCELANCIOUS - SOLO PLAYER
+
+    # You can stop or start time in LFS and while it is stopped you can send packets to move
+    # time in steps.  Time steps are specified in hundredths of a second.
+    # Warning: unlike pausing, this is a "trick" to LFS and the program is unaware of time
+    # passing so you must not leave it stopped because LFS is unusable in that state.
+    # This packet is not available in live multiplayer mode.
+
+    def request_time_stop_packet(self, ReqI=0, stop=0): # (1 - stop / 0 - carry on)
+        """Stop and Start with this IS_SMALL:
+        """
+        self.ISO.send(pyinsim.ISP_SMALL, ReqI=ReqI, SubT=pyinsim.SMALL_TMS, UVal=stop)
+
+    def request_time_step_packet(self, ReqI=0, step=0): # (number of hundredths of a second to update)
+        """When STOPPED, make time step updates with this IS_SMALL:
+        """
+        self.ISO.send(pyinsim.ISP_SMALL, ReqI=ReqI, SubT=pyinsim.SMALL_STP, UVal=step)

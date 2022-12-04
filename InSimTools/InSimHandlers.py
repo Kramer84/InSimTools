@@ -4,6 +4,7 @@ import time
 
 import CustomCallbackEvents as cce
 import InSimRequests as isr
+import Enums
 
 
 def autostring(str_byt):
@@ -13,25 +14,33 @@ def autobyte(str_byt):
     return str_byt if type(str_byt)==bytes else bytes(str_byt)
 
 
-class ServerGeneralEventHandler:
+class ServerGeneralEventHandler(isr.InSimRequestsHandler):
 
     """Class to handle events sent by LFS.
 
     Generally, all it does, is bind an event to a method, and the method itself will then call
-    a function defined elswhere (this code stays static so to say.)
+    a function defined elswhere (this code stays static so to say.) OR :
+    -> Rather create a new class inheriting from this one, and overwrite the methods you need,
+    so you still have an image of all the drivers / track etc. at all time.
+
+    You have a flag to diasable the server state tracking if it is really not needed.
+
+    When you override a function, always use super().old_method() to call the old method beforehand,
+    this will make sure that the server state will still be updated.
+
+    As it has inherited from the requests handler, you have access to all possible requests from here too.
 
     """
-    def __init__(self, insim_obj, LiveServerState):
+    def __init__(self, insim_obj, LiveServerState, update_lss=True):
 
-        self.LSS = LiveServerState
+        super().__init__(insim_obj)
 
-
-        self.connected = False # InSim connection OK
-        self.ISO       = insim_obj #insim_object
-        self.ISRH     = isr.InSimRequestsHandler(self.ISO)
-        self.CBC       = cce.ServerGeneralEventCallbacks(self.ISO)
+        self.LSS        = LiveServerState
+        self.update_lss = update_lss
+        self.connected  = False # InSim connection OK
+        self.ISO        = insim_obj #insim_object
         self.bind_handlers()
-        self.ISRH.initial_requests()
+        self.CBC        = cce.ServerGeneralEventCallbacks(self.ISO)
 
     def __call__(self, *args):
         print("Trying to call with args:")
@@ -42,11 +51,14 @@ class ServerGeneralEventHandler:
     ########## Other functions will have to be included in them
 
     ########## Base Info Handlers
-    #@_BIND(pyinsim.ISP_TINY)
-    def _inSim_Tiny_Packet_Handler(self, insim, data):
+    def _inSim_Tiny_Packet_Handler(self, insim, data): # pyinsim.ISP_TINY
         ReqI = data.ReqI
         SubT = data.SubT
 
+        if SubT==pyinsim.TINY_NONE : # (keep alive packet)
+            self.send_keep_alive_packet() # Must reply with tiny None to keep alive
+        if SubT==pyinsim.TINY_REPLY : # response to request_if_connection_up
+            self.send_keep_alive_packet()
         if SubT==pyinsim.TINY_MPE : # Multiplayer ended
             print('Host Ended')
         if SubT==pyinsim.TINY_REN : # Race ended (race setup screen)
@@ -67,11 +79,14 @@ class ServerGeneralEventHandler:
             print('Time since start:', UVal)
         if SubT==pyinsim.SMALL_ALC : # set or get allowed cars (TINY_ALC)
             print('Allowed Cars:', UVal)
+        if SubT==pyinsim.SMALL_VTA : # handle vote action, can be canceled, forced immidatly etc.
+            # self.set_race_order can only be called after this has been received!
+            print('Vote action :' Enums.VOTE_ACTIONS[UVal])
+
 
 
 
     ########## Button Event Handlers
-
     def _inSim_Button_Function_Event_Handler(self, insim, data):
         """Button function event reception handler.
             ReqI     : 0
@@ -128,149 +143,140 @@ class ServerGeneralEventHandler:
 
     ########## Generic Handlers
 
-    #@_BIND(pyinsim.EVT_INIT)
-    def _inSim_Initialization_Event_Handler(self, insim):
+    def _inSim_Initialization_Event_Handler(self, insim): # pyinsim.EVT_INIT
         self.connected = True
         self.CBC.initialization_event_callback()
 
 
-    #@_BIND(pyinsim.EVT_CLOSE)
-    def _inSim_Closing_Event_Handler(self, insim):
+    def _inSim_Closing_Event_Handler(self, insim): # pyinsim.EVT_CLOSE
         self.connected = False
         self.CBC.closing_event_callback()
 
 
-    #@_BIND(pyinsim.ISP_VER)
-    def _inSim_Version_Info_Handler(self, insim, data):
+    def _inSim_Version_Info_Handler(self, insim, data): # pyinsim.ISP_VER
         print("version=",version,"\nproduct=",product,"\ninSimVer=",inSimVer)
-        self.CBC.version_info_callback(data)
+        self.CBC.version_info_callback(version_data=data)
 
 
-    #@_BIND(pyinsim.EVT_ERROR)
-    def _inSim_Error_Event_Handler(self, insim):
+    def _inSim_Error_Event_Handler(self, insim): # pyinsim.EVT_ERROR
         print('\nInSim encountered an error. Traceback:\n')
         traceback.print_exc()
 
 
-    #@_BIND(pyinsim.EVT_ALL)
-    def _inSim_All_Event_Handler(self, insim, packet):
+    def _inSim_All_Event_Handler(self, insim, packet): # pyinsim.EVT_ALL
         print("\nFunc all events returns :", autostring(insim))
         print('InSim Generic Event Caught : ')
         print(vars(packet))
 
 
-    #@_BIND(pyinsim.EVT_OUTGAUGE)
-    def _inSim_Outgauge_Event_Handler(self, insim):
+    def _inSim_Outgauge_Event_Handler(self, insim): # pyinsim.EVT_OUTGAUGE
         print('\nInSim Outgauge Event Catched.')
         print(autostring(insim))
 
 
-    #@_BIND(pyinsim.EVT_OUTSIM)
-    def _inSim_OutSim_Event_Handler(self, insim):
+    def _inSim_OutSim_Event_Handler(self, insim): # pyinsim.EVT_OUTSIM
         print('\nOutSim Event Catched.')
         print(autostring(insim))
 
 
-    #@_BIND(pyinsim.EVT_TIMEOUT)
-    def _inSim_Timeout_Event_Handler(self, insim):
+    def _inSim_Timeout_Event_Handler(self, insim): # pyinsim.EVT_TIMEOUT
         print('\nTimeout Error Catched')
         print(autostring(insim))
 
 
-    #@_BIND(pyinsim.ISP_STA)
-    def _inSim_State_Packet_Handler(self, insim, state):
-        self.LSS.update_state(state)
+    def _inSim_State_Packet_Handler(self, insim, state): # pyinsim.ISP_STA
+        if self.update_lss :
+            self.LSS.update_state(state)
 
 
 
 ############## Connection Handlers
 
-    #@_BIND(pyinsim.ISP_NCN)
-    def _inSim_newConnection_handler(self, insim,  ncn):
-        self.LSS.new_connection(ncn)
+    def _inSim_newConnection_handler(self, insim,  ncn): # pyinsim.ISP_NCN
+        if self.update_lss :
+            self.LSS.new_connection(ncn)
 
 
-    #@_BIND(pyinsim.ISP_CNL)
-    def _inSim_connection_left_handler(self, insim,  cnl):
-        self.LSS.connection_left(cnl)
+    def _inSim_connection_left_handler(self, insim,  cnl): # pyinsim.ISP_CNL
+        if self.update_lss :
+            self.LSS.connection_left(cnl)
 
 
-    #@_BIND(pyinsim.ISP_NPL)
-    def _inSim_newPlayer_handler(self, insim,  npl):
-        self.LSS.new_player(npl)
+    def _inSim_newPlayer_handler(self, insim,  npl): # pyinsim.ISP_NPL
+        if self.update_lss :
+            self.LSS.new_player(npl)
 
 
-    #@_BIND(pyinsim.ISP_PLL)
-    def _inSim_player_left_race_handler(self, insim,  pll):
+    def _inSim_player_left_race_handler(self, insim,  pll): # pyinsim.ISP_PLL
         #PLayer Leave race (spectate - removed from player list)
-        self.LSS.player_left(pll)
+        if self.update_lss :
+            self.LSS.player_left(pll)
 
 
 
 ############## PLayer data handlers
-    #@_BIND(pyinsim.ISP_CIM)
-    def _inSim_Connection_Interface_Mode_Handler(self, insim, cim):
+    def _inSim_Connection_Interface_Mode_Handler(self, insim, cim): # pyinsim.ISP_CIM
         """Connection interface mode info handler
         Gets a connections interface mode from a user
         """
-        self.LSS.connections[cim.UCID].update_interface_mode(cim)
+        if self.update_lss :
+            self.LSS.connections[cim.UCID].update_interface_mode(cim)
 
 
-    #@_BIND(pyinsim.ISP_SLC)
-    def _inSim_Car_Selected_Handler(self, insim, slc):
-        self.LSS.connections[slc.UCID].update_car_selection(slc)
+    def _inSim_Car_Selected_Handler(self, insim, slc): # pyinsim.ISP_SLC
+        if self.update_lss :
+            self.LSS.connections[slc.UCID].update_car_selection(slc)
 
 
 
 ############## Racing Event handlers
-    #@_BIND(pyinsim.ISP_LAP)
-    def _inSim_Lap_Time_Handler(self, insim, lap):
-        self.LSS.connections[self.LSS.plid_ucid_map[lap.PLID]].LPRD.update_lap_times(lap)
+    def _inSim_Lap_Time_Handler(self, insim, lap): # pyinsim.ISP_LAP
+        if self.update_lss :
+            self.LSS.players[lap.PLID].update_lap_times(lap)
 
-    #@_BIND(pyinsim.ISP_SPX)
-    def _inSim_Split_Time_Handler(self, insim, spx):
-        self.LSS.connections[self.LSS.plid_ucid_map[spx.PLID]].LPRD.update_split_times(spx)
+    def _inSim_Split_Time_Handler(self, insim, spx): # pyinsim.ISP_SPX
+        if self.update_lss :
+            self.LSS.players[spx.PLID].update_split_times(spx)
 
-    #@_BIND(pyinsim.ISP_PIT)
-    def _inSim_Pitting_Event_Handler(self, insim, pit):
-        self.LSS.connections[self.LSS.plid_ucid_map[pit.PLID]].LPRD.player_pitting(pit)
+    def _inSim_Pitting_Event_Handler(self, insim, pit): # pyinsim.ISP_PIT
+        if self.update_lss :
+            self.LSS.players[pit.PLID].player_pitting(pit)
 
-    #@_BIND(pyinsim.ISP_PSF)
-    def _inSim_Pit_Finish_Handler(self, insim, psf):
-        self.LSS.connections[self.LSS.plid_ucid_map[psf.PLID]].LPRD.pit_stop_finished(psf)
+    def _inSim_Pit_Finish_Handler(self, insim, psf): # pyinsim.ISP_PSF
+        if self.update_lss :
+            self.LSS.players[psf.PLID].pit_stop_finished(psf)
 
-    #@_BIND(pyinsim.ISP_PLA)
-    def _inSim_Pit_Lane_Handler(self, insim, pla):
-        self.LSS.connections[self.LSS.plid_ucid_map[pla.PLID]].LPRD.player_in_pitlane(pla)
+    def _inSim_Pit_Lane_Handler(self, insim, pla): # pyinsim.ISP_PLA
+        if self.update_lss :
+            self.LSS.players[pla.PLID].player_in_pitlane(pla)
 
-    #@_BIND(pyinsim.ISP_RES)
-    def _inSim_Race_Result_Handler(self, insim, res):
-        self.LSS.connections[self.LSS.plid_ucid_map[res.PLID]].LPRD.player_result(res)
+    def _inSim_Race_Result_Handler(self, insim, res): # pyinsim.ISP_RES
+        if self.update_lss :
+            self.LSS.players[res.PLID].player_result(res)
 
-    #@_BIND(pyinsim.ISP_AXO)
-    def _inSim_Object_Hit_Handler(self, insim, axo):
-        self.LSS.connections[self.LSS.plid_ucid_map[axo.PLID]].LPRD.player_hit_object(axo)
+    def _inSim_Object_Hit_Handler(self, insim, axo): # pyinsim.ISP_AXO
+        if self.update_lss :
+            self.LSS.players[axo.PLID].player_hit_object(axo)
 
 
-############## Car Tracking And Positions
-    #@_BIND(pyinsim.ISP_NLP) # MAX 40 Cars are returned !!!
-    def _inSim_Node_And_Lap_Packet_Handler(self, insim, nlp):
-        self.LSS.node_lap_packet_dispatcher(nlp)
+############## Car Tracking And Positions # MAX 40 Cars are returned !!!
+    def _inSim_Node_And_Lap_Packet_Handler(self, insim, nlp): # pyinsim.ISP_NLP
+        if self.update_lss :
+            self.LSS.node_lap_packet_dispatcher(nlp)
 
 
 ############## Map and layout handlers
 
-    #@_BIND(pyinsim.ISP_AXI)
-    def _inSim_AutoX_Layout_data_handler(self, insim, axi):
-        self.LSS.LRD.LDH.update_state(axi)
+    def _inSim_AutoX_Layout_data_handler(self, insim, axi): # pyinsim.ISP_AXI
+        if self.update_lss :
+            self.LSS.LRD.LDH.update_state(axi)
 
 
 
 
 ############## Message And User Input Handlers
 
-    #@_BIND(pyinsim.ISP_MSO)
-    def _inSim_Message_Command_Out_Handler(self,insim, mso):
+    def _inSim_Message_Command_Out_Handler(self,insim, mso): # pyinsim.ISP_MSO
         """MSg Out - system messages and user messages
         Args :
             mso : pyinsim.IS_MSO object
@@ -284,8 +290,7 @@ class ServerGeneralEventHandler:
         print(msg)
 
 
-    #@_BIND(pyinsim.ISP_III)
-    def _inSim_Message_To_Host_Handler(self,insim, iii):
+    def _inSim_Message_To_Host_Handler(self,insim, iii): # pyinsim.ISP_III
         """InsIm Info - /i message from user to host's InSim
         Args :
             iii : pyinsim.IS_III object
@@ -336,7 +341,10 @@ class ServerGeneralEventHandler:
         "ISP_III" : "_inSim_Message_To_Host_Handler",
         "ISP_BTF" : "_inSim_Button_Function_Event_Handler",
         "ISP_BTC" : "_inSim_Button_Clicked_Event_Handler",
-        "ISP_BTT" : "_inSim_Text_Button_Typed_Handler",}
+        "ISP_BTT" : "_inSim_Text_Button_Typed_Handler",
+        "ISP_SMALL" : "_inSim_Small_Packet_Handler",
+        "ISP_TINY" : "_inSim_Tiny_Packet_Handler",
+        }
         return event_handler_map
 
     def bind_handlers(self):

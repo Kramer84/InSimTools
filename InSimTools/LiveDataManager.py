@@ -2,6 +2,25 @@
 from Enums import *
 
 
+# good stuff
+# https://stackoverflow.com/questions/35988/c-like-structures-in-python
+
+from UserPlayerTracker import UserLiveDataTracker, PlayerLiveDataTracker
+######## From the InSim documentation :
+# In LFS there is a list of connections AND a list of players in the race
+# Some packets are related to connections, some players, some both
+
+# If you are making a multiplayer InSim program, you must maintain two lists
+# You should use the unique identifier UCID to identify a connection
+
+# Each player has a unique identifier PLID from the moment he joins the race, until he
+# leaves.  It's not possible for PLID and UCID to be the same thing, for two reasons:
+
+# 1) there may be more than one player per connection if AI drivers are used
+# 2) a player can swap between connections, in the case of a driver swap (IS_TOC)
+
+######## The solution is to track Users and Players separately.
+
 class LiveServerState:
     def __init__(self, insim_object):
         self.ISO      = insim_object
@@ -12,16 +31,17 @@ class LiveServerState:
 
         self.Track = ""
         self.weather = 0  # 0 Nice weather 1 , 2 .. etc
-        self.wind = 0 
+        self.wind = 0
 
         self.layoutLoaded = -1 #-1 if no layout is loaded, else its its index in the list below
-        self.layoutNames = []  # multiple layouts possible for the same track. 
+        self.layoutNames = []  # multiple layouts possible for the same track.
 
         self.nConnections = 0
 
         self.LRD = LiveRaceData(self) #passing self, to directly acces maps
         self.LVS = LiveViewState(self)
-        self.connections = {}          # LiveConnectionPlayerData dict
+        self.connections = {}          # UserLiveDataTracker dict
+        self.players = {}              # PlayerLiveDataTracker dict
 
         self.plid_ucid_map = {}   # player id user id maping as some events only return PLID
         self.ucid_uname_map = {}  # user id user name mapping # for printing messages
@@ -32,7 +52,7 @@ class LiveServerState:
         self.nConnections               = insim_state.NumConns
         self.Track                      = insim_state.Track
         self.weather                    = insim_state.Weather
-        self.wind                       = insim_state.Wind 
+        self.wind                       = insim_state.Wind
         print(insim_state.Flags)
         self.iss_state_flag             = ISS_STATE_FLAGS[1]
 
@@ -43,36 +63,36 @@ class LiveServerState:
     def new_connection(self, ncn):
         self.nConnections = ncn.Total
         self.ucid_uname_map[ncn.UCID] = ncn.UName
-        lcpd = LiveConnectionPlayerData(ncn, self)
-        self.connections[ncn.UCID] = lcpd
+        self.connections[ncn.UCID] = UserLiveDataTracker(ncn)
+
 
     def connection_left(self, cnl):
         self.nConnections = cnl.Total
 
         print('Connection left: {}'.format(autostring(self.ucid_uname_map[cnl.UCID])))
-        
-        if DISCONNECT_REASONS[cnl.Reason] == "LEAVR_DISCO":      # 0 - none 
-            pass # do something ? 
-        if DISCONNECT_REASONS[cnl.Reason] == "LEAVR_TIMEOUT":         # 1 - timed out
-            pass # do something ? 
-        if DISCONNECT_REASONS[cnl.Reason] == "LEAVR_LOSTCONN":        # 2 - lost connection
-            pass # do something ? 
-        if DISCONNECT_REASONS[cnl.Reason] == "LEAVR_KICKED":         # 3 - kicked
-            pass # do something ? 
-        if DISCONNECT_REASONS[cnl.Reason] == "LEAVR_BANNED":         # 4 - banned
-            pass # do something ? 
-        if DISCONNECT_REASONS[cnl.Reason] == "LEAVR_SECURITY":         # 5 - security
-            pass # do something ? 
-        if DISCONNECT_REASONS[cnl.Reason] == "LEAVR_CPW":        # 6 - cheat protection wrong
-            pass # do something ? 
-        if DISCONNECT_REASONS[cnl.Reason] == "LEAVR_OOS":        # 7 - out of sync with host
-            pass # do something ? 
-        if DISCONNECT_REASONS[cnl.Reason] == "LEAVR_JOOS":       # 8 - join OOS (initial sync failed)
-            pass # do something ? 
-        if DISCONNECT_REASONS[cnl.Reason] == "LEAVR_HACK":       # 9 - invalid packet
-            pass # do something ?     
 
-        # Cleaning up, if necessary. 
+        if DISCONNECT_REASONS[cnl.Reason] == "LEAVR_DISCO":      # 0 - none
+            pass # do something ?
+        if DISCONNECT_REASONS[cnl.Reason] == "LEAVR_TIMEOUT":         # 1 - timed out
+            pass # do something ?
+        if DISCONNECT_REASONS[cnl.Reason] == "LEAVR_LOSTCONN":        # 2 - lost connection
+            pass # do something ?
+        if DISCONNECT_REASONS[cnl.Reason] == "LEAVR_KICKED":         # 3 - kicked
+            pass # do something ?
+        if DISCONNECT_REASONS[cnl.Reason] == "LEAVR_BANNED":         # 4 - banned
+            pass # do something ?
+        if DISCONNECT_REASONS[cnl.Reason] == "LEAVR_SECURITY":         # 5 - security
+            pass # do something ?
+        if DISCONNECT_REASONS[cnl.Reason] == "LEAVR_CPW":        # 6 - cheat protection wrong
+            pass # do something ?
+        if DISCONNECT_REASONS[cnl.Reason] == "LEAVR_OOS":        # 7 - out of sync with host
+            pass # do something ?
+        if DISCONNECT_REASONS[cnl.Reason] == "LEAVR_JOOS":       # 8 - join OOS (initial sync failed)
+            pass # do something ?
+        if DISCONNECT_REASONS[cnl.Reason] == "LEAVR_HACK":       # 9 - invalid packet
+            pass # do something ?
+
+        # Cleaning up, if necessary.
         if cnl.UCID in list(plid_ucid_map.values()) :
             PLID = list(plid_ucid_map.keys())[list(plid_ucid_map.values()).index(cnl.UCID)]
             if PLID in list(plid_pname_map.keys()):
@@ -86,187 +106,24 @@ class LiveServerState:
         assert npl.UCID in self.connections.keys(), "Some problem here? UCID not in connections."
         self.plid_ucid_map[npl.PLID] = npl.UCID
         self.plid_pname_map[npl.PLID] = npl.PName
-        self.connections[npl.UCID].player_entered_race(npl)
+        self.players[npl.PLID] = PlayerLiveDataTracker(npl)
 
     def player_left(self, pll):
-        UCID = self.plid_ucid_map[pll.PLID]
-        print('Player left: {}'.format(pyinsim.stripcols(autostring(self.plid_pname_map[pll.PLID])))) 
-        self.connections[UCID].player_left_race(pll)
+        print('Player left: {}'.format(pyinsim.stripcols(autostring(self.plid_pname_map[pll.PLID]))))
+        del self.players[pll.PLID]
         del self.plid_pname_map[pll.PLID]
         del self.plid_ucid_map[pll.PLID]
 
     def node_lap_packet_dispatcher(self, nlp):
         self.LRD.update_state_nlp(nlp)
-        for nl in nlp:
-            self.connections[self.plid_ucid_map[nlp.PLID]].LPRD.update_node_lap(nlp)
-
-class LiveConnectionPlayerData:
-    """Data for one player ? 
-    """
-    def __init__(self, ncn, liveServerState):        
-        # Connection info  
-        self.LSS            = liveServerState
-        self.UCID           = ncn.UCID  # user id
-        self.UName          = ncn.UName  #username  
-        self.isAdmin        = ncn.Admin  # 1 if true 
-        self.PName          = ncn.PName # nickname
-        self.RemoteConnFlag = ncn.Flags
-
-        self.Mode    = 0 #What the useris seeing right now
-        self.SubMode = 0 #What the user sees if presses eg F9 while driving etc
-        self.SelType = 0 #What the users selects if is in edition mode, 0 if nothing selected
-
-        self.LPRD = LivePlayerRaceData(self.LSS, self)
-
-        self.PLID   = -1 # player's newly assigned unique id
-        self.PType  = -1 # bit 0: female / bit 1: AI / bit 2: remote
-        self.Flags  = -1 # player flags
-        self.Plate  = "" # number plate - NO ZERO AT END!
-        self.CName  = "" # car name
-        self.SName  = "" # skin name - MAX_CAR_TEX_NAME
-        self.Tyres  = [] # compounds
-        self.H_Mass = -1 # added mass (kg)
-        self.H_TRes = -1 # intake restriction
-        self.Model  = -1 # driver model
-        self.Pass   = -1 # passengers byte
-        self.SetF   = -1 # setup flags (see below)
-        self.NumP   = -1 # number in race - ZERO if this is a join request
-        print(self)
-
-    def __repr__(self):
-        return "{} with id {} is connected. Nickname : {}".format(self.UName, self.UCID, self.PName)
-
-    def player_entered_race(self, npl):
-        self.PLID   = npl.PLID
-        self.PName  = npl.PName
-        self.PType  = npl.PType
-        self.Flags  = npl.Flags
-        self.Plate  = npl.Plate
-        self.CName  = npl.CName
-        self.SName  = npl.SName
-        self.Tyres  = npl.Tyres
-        self.H_Mass = npl.H_Mass
-        self.H_TRes = npl.H_TRes
-        self.Model  = npl.Model
-        self.Pass   = npl.Pass
-        self.SetF   = npl.SetF
-        self.NumP   = npl.NumP
-
-    def player_left_race(self, pll):
-        self.PLID, self.PType,self.Flags = -1
-        self.Plate, self.CName,self.SName = ""
-        self.Tyres= [0]*4
-        self.H_TRes,self.Model,self.Pass,self.SetF,self.NumP, self.H_Mass = None
-
-    def update_interface_mode(self, cim): 
-        self.Mode     = cim.Mode
-        self.SubMode = cim.SubMode
-        self.SelType          = cim.SelType
-
-    def update_car_selection(self, slc):
-        self.CName = slc.CName
+        for info in nlp.Info:
+            self.players[info.PLID].update_node_lap(info)
 
 
-
-
-class LivePlayerRaceData:
-    """Class managing the various laps/ times of a player
-    """ 
-    def __init__(self, liveServerState, liveConnectionPlayerData):
-        self.LSS = liveServerState #Object
-        self.LCPD = liveConnectionPlayerData #Object
-
-        self.UCID = self.LCPD.UCID # Constant :/ 
-
-        self.BTime = 0
-
-        self.LTimes = []
-        self.STimesCur = []
-        self.STimesTT = [] # 2D list
-
-        self.Lap = 0 #Current lap
-        self.Position = 0 
- 
-        self.LapsDone = 0
-        self.Flags = 0  # Blue / Yellow ...
-        self.TTime = 0
-        self.Penalty = 0
-        self.NumStops = 0
-        self.Fuel = 0
-
-        self.ResultNum = 0 # Quali or Finish position
-        self.PSeconds = 0 # Penalty in s
-
-    def update_LTimes(self, lap):
-        self.LTimes.append(lap.LTime)
-        self.STimesTT.append(self.STimesCur)
-        self.STimesCur = []
-        self.Flags = lap.Flags 
-        self.Penalty = lap.Penalty 
-        self.Fuel = lap.Fuel/2
-
-        self.TTime = lap.ETime
-        self.LapsDone = lap.LapsDone 
-        self.NumStops = lap.NumStops
-
-    def update_split_times(self, spx):
-        self.STimesCur.append(STime)
-        self.Penalty = spx.Penalty 
-        self.Fuel = spx.Fuel/2
-
-        self.TTime = spx.ETime
-        self.NumStops = spx.NumStops
-
-    def player_pitting(self, pit):
-        self.Penalty = pit.Penalty 
-        self.Flags = pit.Flags 
-        
-        FuelAdd = pit.FuelAdd/2
-        Tyres = pit.Tyres
-        Work = pit.Work
-
-        self.TTime = pit.ETime
-        self.LapsDone = pit.LapsDone 
-        self.NumStops = pit.NumStops
-
-    def pit_stop_finished(self, psf):
-        STime = psf.STime
-
-    def player_in_pitlane(self, pla):
-        # Do some stuff... 
-        if PIT_LANE_FACTS[pla.fact] == "PITLANE_EXIT":
-            pass
-        if PIT_LANE_FACTS[pla.fact] == "PITLANE_ENTER":
-            pass
-        if PIT_LANE_FACTS[pla.fact] == "PITLANE_NO_PURPOSE":
-            pass
-        if PIT_LANE_FACTS[pla.fact] == "PITLANE_DT":
-            pass
-        if PIT_LANE_FACTS[pla.fact] == "PITLANE_SG":
-            pass
-        if PIT_LANE_FACTS[pla.fact] == "PITLANE_NUM":
-            pass
-
-    def player_result(self, res):
-        self.TTime = res.TTime
-        self.BTime = res.BTime 
-        self.NumStops = res.NumStops
-        self.Confirm = res.Confirm # Confirmation flag
-        self.LapsDone = res.LapsDone
-        self.ResFlags = res.Flags 
-        self.ResultNum = res.ResultNum
-        self.PSeconds  = res.PSeconds
-
-    def player_hit_object(self, axo):
-        pass #Do stuff ? 
-
-    def update_node_lap(self, nlp):
-        self.Lap = nlp.Lap 
-        self.Position = nlp.Position
 
 
 class LiveRaceData:
-    """Class managing the race in general. 
+    """Class managing the race in general.
 
     """
     def __init__(self, LiveServerState):
@@ -282,17 +139,17 @@ class LiveRaceData:
         self.NumFinished = 0
 
         ## Settings for quali time, and race ength
-        self.QualMins = 1 
+        self.QualMins = 1
         self.RaceLaps = -1  #Negative if not defined / used
         self.RaceHours = -1  #Negative if not defined
 
     def update_state(self, insim_state):
         self.Track        = insim_state.Track
         self.nPlayers     = insim_state.NumP
-        self.raceInProg   = insim_state.RaceInProg 
-        self.QualMins     = insim_state.QualMins 
-        self.RaceLaps,self.RaceHours = self.get_race_laps_meaning(insim_state.RaceLaps) 
-        self.NumFinished  = insim_state.NumFinished 
+        self.raceInProg   = insim_state.RaceInProg
+        self.QualMins     = insim_state.QualMins
+        self.RaceLaps,self.RaceHours = self.get_race_laps_meaning(insim_state.RaceLaps)
+        self.NumFinished  = insim_state.NumFinished
 
     def update_state_nlp(self, nlp):
         self.nPlayers = nlp.NumP
@@ -331,25 +188,25 @@ class LayoutDataHandling:
         self.AXStart = axi.AXStart
         self.NumCP = axi.NumCP
         self.NumO = axi.NumO
-        self.LName = axi.LName        
+        self.LName = axi.LName
 
 
 
 class LiveViewState:
     # Class for storing thing about the hosts? view,
     # or replays etc, whats happening,
-    # who we're viewing etc. 
+    # who we're viewing etc.
     def __init__(self, liveServerState):
         self.LSS = liveServerState
         self.iss_state_flag = None
         self.replay_speed = 1.0 #1.0 if normal
-        self.inGameCam    = None #Which type of camera. 
+        self.inGameCam    = None #Which type of camera.
         self.ViewPLID     = None #PLID of player being viewed, 0 if none
 
     def update_state(self, insim_state):
         self.iss_state_flag = ISS_STATE_FLAGS[1] #insim_state.Flags
         self.replay_speed = insim_state.ReplaySpeed
-        self.inGameCam    = insim_state.InGameCam #Which type of camera. 
+        self.inGameCam    = insim_state.InGameCam #Which type of camera.
         self.ViewPLID     = insim_state.ViewPLID #PLID of player being viewed, 0 if none
 
 
