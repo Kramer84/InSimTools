@@ -6,12 +6,14 @@ import CustomCallbackEvents as cce
 import InSimRequests as isr
 import Enums
 
+from   WorkDaemon import WorkDaemon
+
 
 def autostring(str_byt):
     return str_byt.decode() if type(str_byt)==bytes else str_byt
 
 def autobyte(str_byt):
-    return str_byt if type(str_byt)==bytes else bytes(str_byt)
+    return str_byt if type(str_byt)==bytes else bytes(str_byt, "utf-8")
 
 
 class ServerGeneralEventHandler(isr.InSimRequestsHandler):
@@ -31,20 +33,32 @@ class ServerGeneralEventHandler(isr.InSimRequestsHandler):
     As it has inherited from the requests handler, you have access to all possible requests from here too.
 
     """
-    def __init__(self, insim_obj, LiveServerState, update_lss=True):
+    def __init__(self, insim_obj, LiveServerState=None, update_lss=False):
 
         super().__init__(insim_obj)
 
+        self.AliveKeeper = None
         self.LSS        = LiveServerState
         self.update_lss = update_lss
         self.connected  = False # InSim connection OK
         self.ISO        = insim_obj #insim_object
         self.bind_handlers()
         self.CBC        = cce.ServerGeneralEventCallbacks(self.ISO)
+        self.send_msg_all(Msg="In Sim Connected!")
+
+        print("Launching alive keeper daemon")
+        self.alive_keeper_daemon()
 
     def __call__(self, *args):
         print("Trying to call with args:")
         print(args)
+
+    def alive_keeper_daemon(self):
+        """Thread to keep InSim connection alive at all time.
+        """
+        if self.AliveKeeper is not None :
+            self.AliveKeeper.stop()
+        self.AliveKeeper = WorkDaemon(self.request_if_connection_up, 10, run_once = False, run_first_time=False)
 
     ######################################################################
     ########## InSim Event Handlers. This are functions to react to a packet sent by LFS.
@@ -52,13 +66,14 @@ class ServerGeneralEventHandler(isr.InSimRequestsHandler):
 
     ########## Base Info Handlers
     def _inSim_Tiny_Packet_Handler(self, insim, data): # pyinsim.ISP_TINY
+        print('received tiny packet.')
         ReqI = data.ReqI
         SubT = data.SubT
 
         if SubT==pyinsim.TINY_NONE : # (keep alive packet)
             self.send_keep_alive_packet() # Must reply with tiny None to keep alive
         if SubT==pyinsim.TINY_REPLY : # response to request_if_connection_up
-            self.send_keep_alive_packet()
+            print('Connection still up')
         if SubT==pyinsim.TINY_MPE : # Multiplayer ended
             print('Host Ended')
         if SubT==pyinsim.TINY_REN : # Race ended (race setup screen)
@@ -71,6 +86,7 @@ class ServerGeneralEventHandler(isr.InSimRequestsHandler):
             print('Vote Cancelled')
 
     def _inSim_Small_Packet_Handler(self, insim, data):
+        print('received small packet.')
         ReqI = data.ReqI
         SubT = data.SubT
         UVal = data.UVal
@@ -81,7 +97,7 @@ class ServerGeneralEventHandler(isr.InSimRequestsHandler):
             print('Allowed Cars:', UVal)
         if SubT==pyinsim.SMALL_VTA : # handle vote action, can be canceled, forced immidatly etc.
             # self.set_race_order can only be called after this has been received!
-            print('Vote action :' Enums.VOTE_ACTIONS[UVal])
+            print('Vote action :', Enums.VOTE_ACTIONS[UVal])
 
 
 
@@ -313,14 +329,15 @@ class ServerGeneralEventHandler(isr.InSimRequestsHandler):
     ########## Binding Handlers
 
     def event_handler_map(self):
-        event_handler_map = {"EVT_INIT" : "_inSim_Initialization_Event_Handler",
-        "EVT_CLOSE" : "_inSim_Closing_Event_Handler",
+        event_handler_map = {
         "ISP_VER" : "_inSim_Version_Info_Handler",
         "EVT_ERROR" : "_inSim_Error_Event_Handler",
         "EVT_ALL" : "_inSim_All_Event_Handler",
         "EVT_OUTGAUGE" : "_inSim_Outgauge_Event_Handler",
         "EVT_OUTSIM" : "_inSim_OutSim_Event_Handler",
         "EVT_TIMEOUT" : "_inSim_Timeout_Event_Handler",
+        "EVT_INIT" : "_inSim_Initialization_Event_Handler",
+        "EVT_CLOSE" : "_inSim_Closing_Event_Handler",
         "ISP_STA" : "_inSim_State_Packet_Handler",
         "ISP_NCN" : "_inSim_newConnection_handler",
         "ISP_CNL" : "_inSim_connection_left_handler",
@@ -339,7 +356,7 @@ class ServerGeneralEventHandler(isr.InSimRequestsHandler):
         "ISP_AXI" : "_inSim_AutoX_Layout_data_handler",
         "ISP_MSO" : "_inSim_Message_Command_Out_Handler",
         "ISP_III" : "_inSim_Message_To_Host_Handler",
-        "ISP_BTF" : "_inSim_Button_Function_Event_Handler",
+        "ISP_BFN" : "_inSim_Button_Function_Event_Handler",
         "ISP_BTC" : "_inSim_Button_Clicked_Event_Handler",
         "ISP_BTT" : "_inSim_Text_Button_Typed_Handler",
         "ISP_SMALL" : "_inSim_Small_Packet_Handler",

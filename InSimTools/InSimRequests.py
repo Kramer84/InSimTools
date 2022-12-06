@@ -7,7 +7,7 @@ def autostring(str_byt):
     return str_byt.decode() if type(str_byt)==bytes else str_byt
 
 def autobyte(str_byt):
-    return str_byt if type(str_byt)==bytes else bytes(str_byt)
+    return str_byt if type(str_byt)==bytes else bytes(str_byt, "utf-8")
 
 
 class InSimRequestsHandler:
@@ -37,6 +37,7 @@ class InSimRequestsHandler:
     def send_keep_alive_packet(self, ReqI=0):
         """Sends a packet to keep the InSim conneciton alive
         """
+        print('Sending keep alive packet?')
         self.ISO.send(pyinsim.ISP_TINY, ReqI=ReqI, SubT=pyinsim.TINY_NONE)
 
     def request_if_connection_up(self, ReqI=0): # If you want to request a reply from LFS to check the connection
@@ -297,14 +298,14 @@ class InSimRequestsHandler:
         """
         self.ISO.send(pyinsim.ISP_MSL, ReqI=ReqI, Sound=Sound, Msg=autobyte(Msg))
 
-    def send_msg_player(self, UCID=0, PLID=0, msg_cmd="Msg2Player"):
+    def send_msg_player(self, UCID=0, PLID=0, Msg="Msg2Player"):
         '''Sends a message to chat. Can be a command.
             UCID : connection's unique id (0 = host / 255 = all)
             PLID : player's unique id (if zero, use :attr:`UCID`)
-            msg_cmd  : Message (128 characters)
+            Msg  : Message (128 characters)
         '''
-        msg_cmd = autobyte(msg_cmd)
-        self.ISO.send(pyinsim.ISP_MTC, UCID=UCID, PLID=PLID, Msg=msg_cmd)
+        Msg = autobyte(Msg)
+        self.ISO.send(pyinsim.ISP_MTC, UCID=UCID, PLID=PLID, Msg=Msg)
 
     def send_key_press(self, ReqI=0, CharB='\x00', Flags=0):
         """Initialise a new IS_SCH packet.

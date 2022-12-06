@@ -215,4 +215,4 @@ def autostring(str_byt):
     return str_byt.decode() if type(str_byt)==bytes else str_byt
 
 def autobyte(str_byt):
-    return str_byt if type(str_byt)==bytes else bytes(str_byt)
+    return str_byt if type(str_byt)==bytes else bytes(str_byt, "utf-8")

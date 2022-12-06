@@ -58,10 +58,10 @@ CIM_MODES = {
 
 # Different possible vote actions :
 VOTE_ACTIONS = {
-  0 = "VOTE_NONE"
-  1 = "VOTE_END"
-  2 = "VOTE_RESTART"
-  3 = "VOTE_QUALIFY"}
+  0 : "VOTE_NONE",
+  1 : "VOTE_END",
+  2 : "VOTE_RESTART",
+  3 : "VOTE_QUALIFY"}
 
 
 # Different possible info views you can get while driving
